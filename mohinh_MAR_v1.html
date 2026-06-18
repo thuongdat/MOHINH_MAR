@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ Bổ cập có kiểm soát 
+	(MAR)dự kiến - Buôn Ma Thuột </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+
+        /* Water flow dash animation */
+        @keyframes flow {
+            to {
+                stroke-dashoffset: -40;
+            }
+        }
+        
+        .water-flow-line {
+            stroke-dasharray: 8, 12;
+            animation: flow 1.5s linear infinite;
+        }
+
+        .water-flow-line-fast {
+            stroke-dasharray: 6, 8;
+            animation: flow 0.8s linear infinite;
+        }
+
+        /* Pulsing animations */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.6; }
+        }
+        
+        .pulse-area {
+            animation: pulse-soft 3s ease-in-out infinite;
+        }
+
+        @keyframes signal-pulse {
+            0% { r: 4; opacity: 1; }
+            100% { r: 15; opacity: 0; }
+        }
+
+        .signal-wave {
+            animation: signal-pulse 2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* SVG Hotspot transition */
+        .hotspot {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .hotspot:hover {
+            filter: brightness(1.2) drop-shadow(0px 0px 8px rgba(56, 189, 248, 0.6));
+        }
+        .hotspot-active {
+            filter: brightness(1.3) drop-shadow(0px 0px 12px rgba(56, 189, 248, 0.9)) !important;
+            stroke: #38bdf8 !important;
+            stroke-width: 1.5px;
+        }
+
+        /* Tab Transition */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-x-hidden">
+
+    <!-- Top Premium Navbar -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="bg-sky-500 text-slate-950 font-bold text-xs px-2.5 py-1 rounded-full uppercase tracking-wider">Thí điểm bổ cập nhân tạo nước dưới đất</span>
+                <span class="text-slate-400 text-sm">Buôn Ma Thuột, Đắk Lắk</span>
+            </div>
+            <h1 class="text-xl md:text-2xl font-bold text-white mt-1">Sơ Đồ Bổ Cập Có Kiểm Soát (MAR) Dự Kiến </h1>
+        </div>
+        
+        <!-- Controls Console -->
+        <div class="flex flex-wrap items-center gap-4 bg-slate-950 p-2.5 rounded-xl border border-slate-850">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400 font-medium">Trạng thái:</span>
+                <span id="status-badge" class="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Đang vận hành
+                </span>
+            </div>
+            
+            <div class="h-6 w-[1px] bg-slate-800 hidden sm:block"></div>
+            
+            <div class="flex items-center gap-3">
+                <label for="flow-rate" class="text-xs text-slate-400 font-medium">Lưu lượng bơm:</label>
+                <input id="flow-rate" type="range" min="10" max="100" value="60" class="w-24 h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-sky-500">
+                <span id="flow-value" class="text-xs font-mono text-sky-400 font-bold w-12 text-right">60 L/giây</span>
+            </div>
+
+            <div class="h-6 w-[1px] bg-slate-800 hidden sm:block"></div>
+
+            <button id="btn-pause" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-xs text-white px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Tạm dừng</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-6 p-6">
+        
+        <!-- Column 1: Interactive Diagram (8 cols) -->
+        <section class="xl:col-span-8 flex flex-col bg-slate-900/50 rounded-2xl border border-slate-800 p-4 shadow-xl relative min-h-[500px] lg:min-h-[600px]">
+            
+            <!-- Floating Overlay Tooltips/Legends -->
+            <div class="absolute top-6 left-6 z-10 pointer-events-none flex flex-col gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-850 backdrop-blur-sm max-w-xs">
+                <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Chú Giải Địa Tầng</h4>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="w-4 h-3 bg-[#8B3a24] rounded-sm block border border-red-950"></span>
+                    <span class="text-[11px] text-slate-300">Sét nâu đỏ phong hóa (0 - 20m)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-3 bg-[#20252e] rounded-sm block border border-slate-700"></span>
+                    <span class="text-[11px] text-slate-300">Bazan nứt nẻ, hang hốc (20 - 75m)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-0.5 bg-sky-500 border-t border-dashed border-sky-400 block"></span>
+                    <span class="text-[11px] text-slate-300">Đường dòng chảy bổ cập ngầm</span>
+                </div>
+            </div>
+
+            <!-- SVG Container -->
+            <div class="flex-1 w-full h-full flex items-center justify-center">
+                <svg id="mar-svg" class="w-full h-full max-h-[550px]" viewBox="0 0 1000 580" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    
+                    <!-- DEFINITIONS FOR GRADIENTS & PATTERNS -->
+                    <defs>
+                        <!-- Clay texture pattern -->
+                        <pattern id="clayPattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <rect width="40" height="40" fill="#7a2b16" />
+                            <circle cx="10" cy="15" r="1" fill="#601e0e" opacity="0.6"/>
+                            <circle cx="30" cy="25" r="1.5" fill="#50170a" opacity="0.4"/>
+                            <path d="M5 30 Q15 28, 20 32" stroke="#65210f" stroke-width="1" fill="none" opacity="0.5"/>
+                            <path d="M25 10 Q32 12, 35 8" stroke="#65210f" stroke-width="1" fill="none" opacity="0.5"/>
+                        </pattern>
+                        
+                        <!-- Basalt texture pattern -->
+                        <pattern id="basaltPattern" width="60" height="60" patternUnits="userSpaceOnUse">
+                            <rect width="60" height="60" fill="#1b1e24" />
+                            <!-- Cracks -->
+                            <path d="M0 10 L20 25 L15 45 L35 60" stroke="#101216" stroke-width="1.5" fill="none"/>
+                            <path d="M20 25 L45 15 L60 30" stroke="#101216" stroke-width="1.5" fill="none"/>
+                            <path d="M15 45 L40 40 L55 55" stroke="#101216" stroke-width="1.5" fill="none"/>
+                            <!-- Small cavities -->
+                            <rect x="5" y="30" width="3" height="2" rx="1" fill="#111317"/>
+                            <rect x="35" y="8" width="4" height="3" rx="1.5" fill="#111317"/>
+                            <rect x="50" y="45" width="2" height="2" rx="1" fill="#111317"/>
+                        </pattern>
+
+                        <!-- Water Gradients -->
+                        <linearGradient id="riverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#38bdf8" />
+                            <stop offset="100%" stop-color="#0284c7" />
+                        </linearGradient>
+                        <linearGradient id="muddyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7dd3fc" />
+                            <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.8" />
+                            <stop offset="100%" stop-color="#b45309" stop-opacity="0.2" />
+                        </linearGradient>
+                        <linearGradient id="aquiferGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.3" />
+                            <stop offset="100%" stop-color="#0369a1" stop-opacity="0.8" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Background sky / distant mountains -->
+                    <rect width="1000" height="580" rx="16" fill="#0f172a" />
+                    <!-- Soft sky glow -->
+                    <path d="M0 0 H1000 V230 Q700 210, 500 220 Q200 230, 0 200 Z" fill="#1e293b" opacity="0.3"/>
+                    
+                    <!-- Tây Nguyên Distant Hills -->
+                    <path d="M0 160 Q150 110, 300 140 T600 130 T900 150 T1000 160 V240 H0 Z" fill="#14532d" opacity="0.4"/>
+                    <path d="M0 190 Q200 160, 450 185 T900 170 T1000 190 V240 H0 Z" fill="#166534" opacity="0.5"/>
+
+                    <!-- 3D SUBSURFACE LAYERS (Mặt cắt địa tầng) -->
+                    <!-- Layer 1: Weathered Basalt Clay (0 - 20m) -->
+                    <rect x="50" y="240" width="900" height="100" fill="url(#clayPattern)" rx="4"/>
+                    
+                    <!-- Layer 2: Deep Fractured Basalt (20 - 75m) -->
+                    <rect x="50" y="340" width="900" height="210" fill="url(#basaltPattern)" rx="4"/>
+
+                    <!-- Boundary line (20m depth) -->
+                    <line x1="50" y1="340" x2="950" y2="340" stroke="#451a03" stroke-width="2" stroke-dasharray="4, 4"/>
+                    <!-- Boundary text labels -->
+                    <text x="960" y="245" fill="#94a3b8" font-size="10" font-family="monospace">0m</text>
+                    <text x="960" y="345" fill="#f97316" font-size="10" font-family="monospace">20m (Phong hóa)</text>
+                    <text x="960" y="550" fill="#94a3b8" font-size="10" font-family="monospace">75m (Tầng đáy)</text>
+                    
+                    <!-- Cavities / Aquifer storage zones inside deep basalt -->
+                    <!-- Glowing pool representing the water mound / groundwater accumulation -->
+                    <path class="pulse-area" d="M120 480 Q250 420, 500 450 T880 470 Q910 520, 850 540 T450 540 T100 520 Z" fill="url(#aquiferGrad)"/>
+                    <path d="M150 450 Q280 390, 500 410 T850 430" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="5,15" opacity="0.7"/>
+
+                    <!-- Giant Cavity/Hang hốc kiến tạo 1 -->
+                    <path d="M220 380 Q240 370, 260 395 T280 430 T240 440 T190 410 Z" fill="#0c4a6e" stroke="#0284c7" stroke-width="1.5" opacity="0.8"/>
+                    <!-- Giant Cavity 2 -->
+                    <path d="M680 400 Q720 380, 750 410 T790 450 T730 460 T670 430 Z" fill="#0c4a6e" stroke="#0284c7" stroke-width="1.5" opacity="0.8"/>
+                    <!-- Cavity Water lines -->
+                    <path d="M200 415 H270 M210 425 H255" stroke="#38bdf8" stroke-width="1" opacity="0.6"/>
+                    <path d="M680 425 H770 M695 435 H750" stroke="#38bdf8" stroke-width="1" opacity="0.6"/>
+
+                    <!-- LANDSCAPE ELEMENTS ON THE SURFACE -->
+                    <!-- Traditional Nha Rong (communal house) icon on the mountain top -->
+                    <g transform="translate(80, 110) scale(0.65)" opacity="0.9">
+                        <!-- High roof -->
+                        <polygon points="40,10 5,80 75,80" fill="#78350f" stroke="#451a03" stroke-width="2"/>
+                        <line x1="40" y1="10" x2="40" y2="80" stroke="#b45309" stroke-width="1"/>
+                        <!-- Stilts / Base structure -->
+                        <rect x="15" y="80" width="50" height="20" fill="#d97706"/>
+                        <line x1="20" y1="100" x2="20" y2="120" stroke="#451a03" stroke-width="3"/>
+                        <line x1="35" y1="100" x2="35" y2="120" stroke="#451a03" stroke-width="3"/>
+                        <line x1="45" y1="100" x2="45" y2="120" stroke="#451a03" stroke-width="3"/>
+                        <line x1="60" y1="100" x2="60" y2="120" stroke="#451a03" stroke-width="3"/>
+                        <!-- Ladder -->
+                        <line x1="10" y1="80" x2="-5" y2="120" stroke="#b45309" stroke-width="2"/>
+                        <line x1="0" y1="90" x2="10" y2="92" stroke="#b45309" stroke-width="1.5"/>
+                        <line x1="-2" y1="105" x2="5" y2="107" stroke="#b45309" stroke-width="1.5"/>
+                    </g>
+                    <!-- Text label for communal house -->
+                    <text x="140" y="180" fill="#94a3b8" font-size="11" font-weight="500">Tây Nguyên Nhà Rông</text>
+
+                    <!-- Rẫy cà phê bạt ngàn (Coffee plantations patterns/icons) -->
+                    <g transform="translate(700, 150) scale(0.5)" opacity="0.8">
+                        <ellipse cx="50" cy="50" rx="30" ry="15" fill="#15803d" />
+                        <ellipse cx="110" cy="45" rx="25" ry="12" fill="#166534" />
+                        <ellipse cx="170" cy="55" rx="35" ry="18" fill="#14532d" />
+                        <text x="50" y="25" fill="#a7f3d0" font-size="20" font-weight="bold">Rừng cà phê</text>
+                    </g>
+
+                    <!-- SURFACE HYDRAULIC INFRASTRUCTURE -->
+                    
+                    <!-- 1. Hydroelectric Dam (Đập thủy điện) -->
+                    <g id="hs-dam" class="hotspot">
+                        <!-- Upstream reservoir water -->
+                        <path d="M50 180 Q100 175, 150 180 L160 215 L50 215 Z" fill="url(#riverGrad)"/>
+                        <!-- Concrete Dam structure -->
+                        <path d="M140 170 L170 170 L190 230 L130 230 Z" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
+                        <!-- Dam overflow spillway water -->
+                        <path d="M165 170 Q180 180, 185 210 L175 230 L155 230 Z" fill="#e0f2fe" opacity="0.9"/>
+                        <!-- Flow line over spillway -->
+                        <path d="M165 170 Q180 185, 180 230" stroke="#38bdf8" stroke-width="1.5" class="water-flow-line-fast"/>
+                        <!-- Labels -->
+                        <text x="100" y="160" fill="#e2e8f0" font-size="11" font-weight="bold">Đập Thủy Điện</text>
+                        <text x="85" y="172" fill="#38bdf8" font-size="9">Hồ chứa thượng nguồn</text>
+                    </g>
+
+                    <!-- 2. Main Canal - 100m (Kênh dẫn nước chính) -->
+                    <g id="hs-canal" class="hotspot">
+                        <!-- Canal Concrete walls -->
+                        <path d="M190 205 L380 238 L380 248 L190 215 Z" fill="#64748b"/>
+                        <!-- Water inside the canal -->
+                        <path d="M190 207 L380 240 L380 244 L190 211 Z" fill="url(#riverGrad)"/>
+                        <!-- Flowing water dashes -->
+                        <path d="M190 209 L380 242" stroke="#e0f2fe" stroke-width="3" class="water-flow-line" id="flow-canal"/>
+                        <!-- Labels -->
+                        <text x="210" y="200" fill="#cbd5e1" font-size="11" font-weight="500">Kênh dẫn chính (Dài ~100m)</text>
+                    </g>
+
+                    <!-- 3. Sedimentation Basin - 60m x 30m x 3m (Bể lắng nước mặt) -->
+                    <g id="hs-sediment" class="hotspot">
+                        <!-- Concrete structure of the basin -->
+                        <path d="M375 220 L530 220 L515 270 L395 270 Z" fill="#475569" stroke="#334155" stroke-width="2"/>
+                        <!-- Water volume in basin (Muddy gradient to represent settling) -->
+                        <path d="M380 225 L525 225 L512 267 L398 267 Z" fill="url(#muddyGrad)"/>
+                        <!-- Silt Settling Particles (animated/stationary representation) -->
+                        <ellipse cx="450" cy="264" rx="45" ry="3" fill="#92400e" opacity="0.7"/>
+                        <circle cx="430" cy="250" r="1.5" fill="#b45309" opacity="0.5"/>
+                        <circle cx="470" cy="255" r="1" fill="#b45309" opacity="0.6"/>
+                        <circle cx="450" cy="245" r="2" fill="#78350f" opacity="0.4"/>
+                        <!-- Labels -->
+                        <text x="400" y="215" fill="#f8fafc" font-size="11" font-weight="bold">Bể Lắng Nước Mặt</text>
+                        <text x="405" y="238" fill="#e2e8f0" font-size="9" font-family="monospace">(60m x 30m x 3m)</text>
+                        <text x="415" y="260" fill="#f59e0b" font-size="8" font-weight="500">Phù sa đang lắng tụ tĩnh</text>
+                    </g>
+
+                    <!-- 4. PVC Pipe Connection - Ø 200mm, 50m (Ống dẫn nước PVC dốc đứng) -->
+                    <g id="hs-pvc" class="hotspot">
+                        <!-- PVC Pipe body -->
+                        <path d="M515 255 L650 310" stroke="#0284c7" stroke-width="6" stroke-linecap="round"/>
+                        <path d="M515 255 L650 310" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Internal flow animation -->
+                        <path d="M515 255 L650 310" stroke="#ffffff" stroke-width="2" stroke-dasharray="4,10" class="water-flow-line-fast" id="flow-pvc"/>
+                        <!-- Labels -->
+                        <text x="525" y="285" fill="#cbd5e1" font-size="10" font-weight="bold">Ống PVC Ø 200mm</text>
+                        <text x="540" y="297" fill="#94a3b8" font-size="9">(Dài ~50m, dốc lớn)</text>
+                    </g>
+
+                    <!-- 5. Recharge/Filtration Basin with Concrete Lid (Bồn thấm lọc có nắp bê tông) -->
+                    <g id="hs-filtration" class="hotspot">
+                        <!-- Concrete structure -->
+                        <rect x="640" y="290" width="200" height="60" fill="#334155" stroke="#1e293b" stroke-width="2" rx="4"/>
+                        <!-- Concrete cover (Nắp đậy bê tông) -->
+                        <rect x="635" y="285" width="210" height="8" fill="#64748b" rx="2"/>
+                        <!-- Sỏi sạn lọc tinh (Gravel/sand filter layer 1.0m) -->
+                        <rect x="645" y="315" width="190" height="20" fill="#b45309" opacity="0.65"/>
+                        <!-- Small dots pattern in gravel layer -->
+                        <circle cx="655" cy="325" r="2" fill="#78350f"/>
+                        <circle cx="675" cy="320" r="1.5" fill="#d97706"/>
+                        <circle cx="705" cy="328" r="2.5" fill="#78350f"/>
+                        <circle cx="745" cy="322" r="1" fill="#f59e0b"/>
+                        <circle cx="785" cy="326" r="2" fill="#d97706"/>
+                        <circle cx="815" cy="321" r="3" fill="#78350f"/>
+                        <!-- Water layer above gravel -->
+                        <rect x="645" y="295" width="190" height="20" fill="#38bdf8" opacity="0.7"/>
+                        <!-- Flow arrows down through gravel -->
+                        <path d="M660 305 V325 M710 305 V325 M760 305 V325 M810 305 V325" stroke="#e0f2fe" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2,4" class="water-flow-line-fast"/>
+                        <!-- Bottom Cement lining (Lót đáy xi măng 0.1m) -->
+                        <rect x="645" y="340" width="190" height="6" fill="#94a3b8"/>
+                        <!-- Labels -->
+                        <text x="690" y="280" fill="#ffffff" font-size="11" font-weight="bold">Bồn Thấm Lọc</text>
+                        <text x="648" y="310" fill="#1e293b" font-size="8" font-weight="bold">Nước sạch sơ bộ</text>
+                        <text x="648" y="333" fill="#ffffff" font-size="8" font-weight="500">Tầng lọc sỏi sạn (1.0m)</text>
+                    </g>
+
+                    <!-- 6. Three Recharge Boreholes - Ø 168mm, 75m deep (3 Lỗ khoan bổ cập sâu) -->
+                    <!-- Borehole 1 -->
+                    <g id="hs-borehole-1" class="hotspot">
+                        <!-- Upper Casing (0-20m) - Solid steel casing protecting clay -->
+                        <rect x="660" y="345" width="12" height="100" fill="#cbd5e1" stroke="#475569" stroke-width="1"/>
+                        <!-- Screen Pipe (20-75m) - Perforated screen inside basalt -->
+                        <rect x="661" y="445" width="10" height="100" fill="#0284c7" stroke="#38bdf8" stroke-dasharray="2,2"/>
+                        <!-- Flowing water inside tube -->
+                        <line x1="666" y1="345" x2="666" y2="540" stroke="#e0f2fe" stroke-width="4" stroke-dasharray="8,10" class="water-flow-line-fast" id="flow-bh1"/>
+                        <!-- Water jetting out of screens -->
+                        <path d="M655 450 Q640 455, 630 465 M655 490 Q635 495, 620 510 M655 525 Q640 530, 625 545" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="2,4" class="water-flow-line"/>
+                        <path d="M677 450 Q690 455, 700 465 M677 490 Q695 495, 710 510 M677 525 Q690 530, 705 545" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="2,4" class="water-flow-line"/>
+                    </g>
+
+                    <!-- Borehole 2 -->
+                    <g id="hs-borehole-2" class="hotspot">
+                        <!-- Upper Casing (0-20m) -->
+                        <rect x="730" y="345" width="12" height="100" fill="#cbd5e1" stroke="#475569" stroke-width="1"/>
+                        <!-- Screen Pipe (20-75m) -->
+                        <rect x="731" y="445" width="10" height="100" fill="#0284c7" stroke="#38bdf8" stroke-dasharray="2,2"/>
+                        <!-- Flowing water inside tube -->
+                        <line x1="736" y1="345" x2="736" y2="540" stroke="#e0f2fe" stroke-width="4" stroke-dasharray="8,10" class="water-flow-line-fast" id="flow-bh2"/>
+                        <!-- Water jetting out of screens -->
+                        <path d="M725 460 Q710 465, 695 480 M725 500 Q705 510, 690 530" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="2,4" class="water-flow-line"/>
+                        <path d="M747 460 Q765 465, 780 480 M747 500 Q765 510, 785 530" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="2,4" class="water-flow-line"/>
+                    </g>
+
+                    <!-- Borehole 3 -->
+                    <g id="hs-borehole-3" class="hotspot">
+                        <!-- Upper Casing (0-20m) -->
+                        <rect x="800" y="345" width="12" height="100" fill="#cbd5e1" stroke="#475569" stroke-width="1"/>
+                        <!-- Screen Pipe (20-75m) -->
+                        <rect x="801" y="445" width="10" height="100" fill="#0284c7" stroke="#38bdf8" stroke-dasharray="2,2"/>
+                        <!-- Flowing water inside tube -->
+                        <line x1="806" y1="345" x2="806" y2="540" stroke="#e0f2fe" stroke-width="4" stroke-dasharray="8,10" class="water-flow-line-fast" id="flow-bh3"/>
+                        <!-- Water jetting out of screens -->
+                        <path d="M795 450 Q780 455, 770 465 M795 490 Q775 495, 760 510 M795 525 Q780 530, 765 545" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="2,4" class="water-flow-line"/>
+                        <path d="M817 450 Q830 455, 840 465 M817 490 Q835 495, 850 510 M817 525 Q830 530, 845 545" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="2,4" class="water-flow-line"/>
+                    </g>
+
+                    <!-- Label for the 3 Recharge Wells -->
+                    <text x="685" y="365" fill="#ffffff" font-size="9" font-weight="bold" bgcolor="#000000">3 LỖ KHOAN BỔ CẬP Ø 168mm</text>
+                    <text x="715" y="377" fill="#38bdf8" font-size="8">(Khoảng cách ~15m, Sâu 75m)</text>
+
+                    <!-- 7. Active Telemetry Monitoring Well - Ø 90mm, 75m deep (Giếng quan trắc tự động) -->
+                    <g id="hs-monitoring" class="hotspot">
+                        <!-- Small monitoring tube -->
+                        <rect x="890" y="345" width="8" height="195" fill="#475569" stroke="#334155" stroke-width="1"/>
+                        <!-- Groundwater Level inside monitoring well -->
+                        <rect x="891" y="460" width="6" height="80" fill="#0284c7" opacity="0.6"/>
+                        <!-- Submerged Datalogger Sensor -->
+                        <rect x="891" y="475" width="6" height="15" fill="#10b981" rx="1"/>
+                        <!-- Sensor wire -->
+                        <line x1="894" y1="345" x2="894" y2="475" stroke="#10b981" stroke-width="0.8"/>
+                        <!-- Telemetry surface station box -->
+                        <rect x="880" y="325" width="25" height="20" fill="#1e293b" stroke="#475569" stroke-width="1.5" rx="3"/>
+                        <circle cx="892" cy="335" r="2" fill="#10b981" class="animate-pulse"/>
+                        <!-- Wireless Signal Waves -->
+                        <circle cx="892" cy="335" r="4" stroke="#10b981" stroke-width="1" fill="none" class="signal-wave"/>
+                        <!-- Labels -->
+                        <text x="835" y="312" fill="#34d399" font-size="10" font-weight="bold">Giếng Quan Trắc Ø 90mm</text>
+                        <text x="860" y="323" fill="#94a3b8" font-size="8">(Datalogger tự động)</text>
+                    </g>
+
+                    <!-- Large flow direction arrows representing process -->
+                    <!-- Flow 1: Dam to Sediment -->
+                    <path d="M295 210 L315 215" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M315 215 L308 210 M315 215 L310 220" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Flow 2: Sediment to PVC -->
+                    <path d="M500 245 L525 255" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Flow 3: Filtration to Boreholes -->
+                    <path d="M740 338 L740 350" stroke="#e0f2fe" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M740 350 L736 345 M740 350 L744 345" stroke="#e0f2fe" stroke-width="2.5" stroke-linecap="round"/>
+
+                </svg>
+            </div>
+
+            <!-- Action Prompt Footer -->
+            <div class="mt-2 text-center py-2 bg-slate-950/40 rounded-xl border border-slate-850">
+                <p class="text-xs text-slate-400">
+                    <span class="text-sky-400 font-bold">💡 Tương tác:</span> Click chuột vào các bộ phận của mô hình (Đập, Bể lắng, Ống dẫn, Bồn lọc, Lỗ khoan...) để xem chi tiết thông số kỹ thuật.
+                </p>
+            </div>
+        </section>
+        
+        <!-- Column 2: Specs & SOP Dashboard (4 cols) -->
+        <section class="xl:col-span-4 flex flex-col gap-6">
+            
+            <!-- Tab Headers -->
+            <div class="bg-slate-900 border border-slate-800 p-1 rounded-xl flex">
+                <button onclick="switchTab('tab-details')" id="btn-tab-details" class="tab-btn flex-1 py-2 text-xs font-semibold rounded-lg text-white bg-sky-600 transition">
+                    Thông số Chi tiết
+                </button>
+                <button onclick="switchTab('tab-sop')" id="btn-tab-sop" class="tab-btn flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+                    Quy trình SOP
+                </button>
+                <button onclick="switchTab('tab-telemetry')" id="btn-tab-telemetry" class="tab-btn flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+                    Giám sát Online
+                </button>
+            </div>
+
+            <!-- Tab 1 Content: Technical Specifications -->
+            <div id="tab-details" class="tab-content active flex-1 bg-slate-900/40 rounded-2xl border border-slate-800 p-5 flex flex-col shadow-xl">
+                <div id="spec-placeholder" class="flex-1 flex flex-col justify-center items-center text-center p-6">
+                    <div class="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center text-sky-400 mb-4 animate-bounce">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                    </div>
+                    <h3 class="text-sm font-semibold text-white">Chưa chọn bộ phận</h3>
+                    <p class="text-xs text-slate-400 mt-2 max-w-xs">
+                        Vui lòng click trực tiếp vào bất kỳ hạng mục công trình hoặc đới địa tầng nào trên sơ đồ 3D để trích xuất hồ sơ thông số kỹ thuật chi tiết.
+                    </p>
+                </div>
+
+                <div id="spec-display" class="hidden flex-1 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                            <h3 id="spec-title" class="text-base font-bold text-sky-400">Tên hạng mục</h3>
+                            <span id="spec-tag" class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">Cấp 1</span>
+                        </div>
+                        
+                        <p id="spec-desc" class="text-xs text-slate-300 leading-relaxed mb-4">Mô tả chi tiết hạng mục...</p>
+                        
+                        <div class="space-y-3">
+                            <div class="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                                <span class="text-[10px] text-slate-450 uppercase block font-semibold">Thông số hình học / Kỹ thuật:</span>
+                                <span id="spec-dim" class="text-xs font-mono text-white font-bold mt-1 block">Dài 100m x Rộng 2m</span>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                                <span class="text-[10px] text-slate-450 uppercase block font-semibold">Vật liệu cấu tạo:</span>
+                                <span id="spec-material" class="text-xs text-slate-200 mt-1 block">Bê tông cốt thép</span>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                                <span class="text-[10px] text-slate-450 uppercase block font-semibold">Mục đích / Vai trò chính:</span>
+                                <span id="spec-role" class="text-xs text-slate-200 mt-1 block">Dẫn nước tự chảy tạo độ dốc lớn</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+                        <span class="text-xs text-slate-400">Khối lượng BOQ:</span>
+                        <span id="spec-boq" class="text-xs font-bold text-white bg-slate-800 px-3 py-1 rounded-lg">100m²</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2 Content: SOP Standard Operating Procedures -->
+            <div id="tab-sop" class="tab-content flex-1 bg-slate-900/40 rounded-2xl border border-slate-800 p-5 flex flex-col shadow-xl">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4 border-b border-slate-800 pb-2">Quy Trình Vận Hành Tiêu Chuẩn (SOP)</h3>
+                
+                <div class="space-y-4 flex-1 overflow-y-auto pr-1">
+                    <!-- Step 1 -->
+                    <div onclick="selectSopStep(1)" id="sop-step-1" class="sop-card p-3.5 rounded-xl border border-slate-800 bg-slate-950/30 hover:bg-slate-900/50 cursor-pointer transition">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center border border-slate-700 step-num">1</span>
+                            <h4 class="text-xs font-bold text-slate-200 uppercase">Bước 1: Chuẩn Bị & Kiểm Tra</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            Vệ sinh bề mặt sỏi sạn bồn thấm lọc, kiểm tra cao độ ống lọc nhô lên <span class="text-sky-400 font-mono">+1.2m</span> để chặn bùn cặn tràn vào giếng bổ cập.
+                        </p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div onclick="selectSopStep(2)" id="sop-step-2" class="sop-card p-3.5 rounded-xl border border-slate-800 bg-slate-950/30 hover:bg-slate-900/50 cursor-pointer transition">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center border border-slate-700 step-num">2</span>
+                            <h4 class="text-xs font-bold text-slate-200 uppercase">Bước 2: Lắng Lọc Sơ Bộ</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            Mở van kênh dẫn hở phía đập tràn, dẫn nước suối vào bể lắng. Duy trì cột nước sâu <span class="text-sky-400 font-mono">3.0m</span> ổn định để bùn sét, phù sa lắng tụ tự nhiên xuống đáy.
+                        </p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div onclick="selectSopStep(3)" id="sop-step-3" class="sop-card p-3.5 rounded-xl border border-slate-800 bg-slate-950/30 hover:bg-slate-900/50 cursor-pointer transition">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center border border-slate-700 step-num">3</span>
+                            <h4 class="text-xs font-bold text-slate-200 uppercase">Bước 3: Lọc Tinh & Bổ Cập Sâu</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            Nước trong từ bể lắng tự chảy qua ống PVC Ø 200mm vào bồn thấm lọc. Nước lọc ngược qua tầng sỏi sạn 1.0m, sau đó tự chảy vào 3 giếng để ngấm vào đá bazan nứt nẻ.
+                        </p>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div onclick="selectSopStep(4)" id="sop-step-4" class="sop-card p-3.5 rounded-xl border border-slate-800 bg-slate-950/30 hover:bg-slate-900/50 cursor-pointer transition">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 text-xs font-bold flex items-center justify-center border border-slate-700 step-num">4</span>
+                            <h4 class="text-xs font-bold text-slate-200 uppercase">Bước 4: Giám Sát Telemetry</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            Cảm biến tự động ghi lại biến động mực nước của 5 giếng quan trắc theo thời gian thực (Real-time). Xuất báo cáo dữ liệu định kỳ hàng tháng để kiểm soát mực bổ cập.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3 Content: Real-time Telemetry Dashboard -->
+            <div id="tab-telemetry" class="tab-content flex-1 bg-slate-900/40 rounded-2xl border border-slate-800 p-5 flex flex-col shadow-xl">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4 border-b border-slate-800 pb-2">Số Liệu Giám Sát Thời Gian Thực</h3>
+                
+                <!-- Telemetry Grid -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-850 text-center">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold">Mực nước bổ cập</span>
+                        <span id="tel-water-level" class="text-lg font-mono font-bold text-sky-400 mt-1 block">42.85 m</span>
+                        <span class="text-[9px] text-emerald-400 flex items-center justify-center gap-1 mt-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> +0.02 m/h
+                        </span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-850 text-center">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold">Lưu lượng nạp</span>
+                        <span id="tel-flow-rate" class="text-lg font-mono font-bold text-teal-400 mt-1 block">15.4 L/s</span>
+                        <span class="text-[9px] text-slate-400 mt-0.5">Dưới tải trọng lực</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-850 text-center">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold">Độ đục TSS</span>
+                        <span class="text-lg font-mono font-bold text-yellow-550 text-amber-500 mt-1 block">4.2 mg/L</span>
+                        <span class="text-[9px] text-emerald-400">✓ Đạt chuẩn bổ cập</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-850 text-center">
+                        <span class="text-[9px] text-slate-400 block uppercase font-bold">Nhiệt độ nước ngầm</span>
+                        <span class="text-lg font-mono font-bold text-slate-200 mt-1 block">24.6 °C</span>
+                        <span class="text-[9px] text-slate-450">Độ ổn định cao</span>
+                    </div>
+                </div>
+
+                <!-- Simulation Graph Card -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 flex-1 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-300">Biểu đồ áp lực nước tự ghi (Datalogger)</span>
+                        <span class="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 uppercase">Live</span>
+                    </div>
+                    
+                    <!-- Dynamic mini graph using CSS/JS -->
+                    <div class="relative w-full h-24 bg-slate-900 rounded-lg overflow-hidden border border-slate-800 flex items-end">
+                        <!-- Simulated wave path -->
+                        <svg class="w-full h-full absolute inset-0" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path id="telemetry-graph-path" d="M 0 25 Q 10 15, 20 22 T 40 18 T 60 12 T 80 15 T 100 8 L 100 30 L 0 30 Z" fill="url(#aquiferGrad)" stroke="#38bdf8" stroke-width="1"/>
+                        </svg>
+                        <div class="absolute bottom-2 left-2 flex items-center gap-1.5 text-[9px] font-mono text-slate-400">
+                            <span class="w-1.5 h-1.5 bg-sky-500 rounded-full"></span> Áp lực cột nước (m)
+                        </div>
+                    </div>
+
+                    <p class="text-[10px] text-slate-450 mt-3 leading-relaxed">
+                        Hệ thống cảm biến áp suất tự động lưu trữ giá trị áp lực thủy tĩnh cứ mỗi <span class="text-slate-300">15 phút</span> và truyền trực tuyến về trung tâm xử lý dữ liệu để theo dõi hình dáng gò nước ngầm.
+                    </p>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer BOQ Sheet -->
+    <footer class="bg-slate-950 border-t border-slate-850 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 mt-auto">
+        <div class="flex flex-wrap items-center gap-6">
+            <div>
+                <span class="text-slate-500">Mã Dự Án:</span> <span class="font-mono text-slate-300">TĐ-MAR-BMT-2026</span>
+            </div>
+            <div>
+                <span class="text-slate-500">Số lượng lỗ khoan:</span> <span class="text-slate-300">3 Lỗ khoan bổ cập + 5 Lỗ khoan quan trắc</span>
+            </div>
+            <div>
+                <span class="text-slate-500">Tầng Tiếp Nhận:</span> <span class="text-slate-300">Đá Bazan nứt nẻ (Độ sâu 20m - 75m)</span>
+            </div>
+        </div>
+        <p>© 2026 Liên đoàn Quy hoạch và Điều tra tài nguyên nước miền Trung (CEVIWAPI)</p>
+    </footer>
+
+    <!-- INTERACTIVE ENGINE JAVASCRIPT -->
+    <script>
+        // Database for MAR components
+        const componentData = {
+            'hs-dam': {
+                title: "Đập Thủy Điện / Thượng Nguồn",
+                tag: "Nguồn Nước Cấp",
+                desc: "Đập tràn và đập thủy điện giữ vai trò điều tiết dòng chảy và tích lũy nước mặt vào mùa mưa. Đây là nguồn cấp nước dồi dào, ổn định với chất lượng nước mặt tối ưu để phục vụ quy trình bổ cập nhân tạo.",
+                dim: "Lượng chảy tự nhiên mùa mưa cực kỳ dồi dào",
+                material: "Bê tông cốt thép trọng lực chịu lực cao",
+                role: "Chặn dòng, tạo hồ chứa trữ và điều phối lượng nước thô đi qua hệ thống kênh dẫn chính.",
+                boq: "Công trình hỗ trợ phụ trợ đầu nguồn"
+            },
+            'hs-canal': {
+                title: "Kênh Dẫn Nước Chính",
+                tag: "Hệ thống dẫn nước",
+                desc: "Tuyến kênh hở chịu trách nhiệm dẫn dòng nước mặt thô chảy tự do bằng trọng lực từ đập thủy điện phía thượng nguồn chảy trực diện về phía hạ lưu để đổ vào bể lắng sơ bộ.",
+                dim: "Dài 100m x Rộng 2m x Sâu 1m (Độ dốc thủy lực ~1-2%)",
+                material: "Lát tấm bê tông đúc sẵn M200 chống xói mòn và giảm hao hụt do thấm thất thoát.",
+                role: "Điều hướng dòng nước lũ, tạo độ dốc thủy lực đủ lớn để đẩy nhanh tốc độ truyền nước thô về bể lắng.",
+                boq: "100m dài kênh bọc đá lát bê tông"
+            },
+            'hs-sediment': {
+                title: "Bể Lắng Nước Mặt",
+                tag: "Cấp 1 - Lắng lọc cơ học",
+                desc: "Hồ lắng tĩnh được thiết kế sâu nhằm mục đích giảm đột ngột vận tốc dòng chảy của nước mặt đầu vào. Khi vận tốc giảm, quá trình lắng tĩnh tự nhiên diễn ra, cho phép các hạt phù sa, cát mịn và bùn sét lơ lửng kết dính và chìm xuống đáy.",
+                dim: "Dài 60m x Rộng 30m x Sâu 3m (Dung tích chứa hữu ích ~5.400 m³)",
+                material: "Đất đào đắp kiên cố, bọc bờ đá hộc kết hợp lót đáy chống thấm sạt lở đồi.",
+                role: "Lọc bỏ trên 85% hàm lượng chất rắn lơ lửng (TSS), bảo vệ bồn thấm lọc phía sau không bị quá tải hay nghẹt bùn.",
+                boq: "Xây dựng 1 bể chứa hoàn chỉnh"
+            },
+            'hs-pvc': {
+                title: "Đường Ống Dẫn Nước PVC",
+                tag: "Cấp phối nước dốc",
+                desc: "Thay thế hoàn toàn cho kênh dẫn hở lộ thiên dễ nhiễm bẩn, đường ống PVC kín giúp vận chuyển dòng nước đã lắng sạch sơ bộ chảy xiên dốc từ bể lắng đưa trực tiếp xuống bồn thấm lọc phụ trợ.",
+                dim: "Đường kính Ø 200mm, Tổng chiều dài tuyến ~50m",
+                material: "Nhựa uPVC cứng chịu lực cao, kết nối bằng gioăng khớp nối chuyên dụng",
+                role: "Vận chuyển nước tuần hoàn kín, tận dụng triệt để chênh lệch cao độ địa hình tạo áp lực dốc lớn tự chảy tự nhiên.",
+                boq: "50m ống uPVC Ø 200mm lắp đặt hoàn chỉnh"
+            },
+            'hs-filtration': {
+                title: "Bồn Thấm Lọc & Tầng Lọc Ngược",
+                tag: "Cấp 2 - Lọc tinh thẩm thấu",
+                desc: "Là bồn chứa ngầm thiết kế thấp hơn, tích hợp hệ thống lọc ngược. Nước được lọc triệt để bụi mịn cơ học trước khi chảy tự do vào các lỗ khoan. Bồn được bảo vệ bởi nắp đậy bê tông dày phía trên chống rác thải bẩn xâm lấn.",
+                dim: "Dài 50m x Rộng 2m x Sâu 3m",
+                material: "Lót đáy xi măng mỏng 0,1m; đổ lớp sỏi sạn lọc tinh, cát thạch anh dày tổng 1,0m; nắp đậy bê tông lắp ghép.",
+                role: "Lọc tinh sâu loại bỏ rác, bụi mịn lơ lửng còn sót lại, tạo màng sinh học lọc vi sinh nhẹ, gom nước sạch chảy vào giếng khoan.",
+                boq: "Thi công 1 bồn thấm bọc lót đáy đầy đủ"
+            },
+            'hs-borehole-1': {
+                title: "Lỗ Khoan Bổ Cập Sâu Số 1",
+                tag: "Bổ cập trọng lực",
+                desc: "Là giếng khoan bổ cập sâu đặt trong bồn thấm lọc. Giếng xuyên thủng hoàn toàn lớp sét phong hóa nông (20m) cản nước để đưa dòng nước tinh lọc đi thẳng trực tiếp vào lòng đới bazan nứt nẻ, hang hốc ở sâu dưới lòng đất.",
+                dim: "Đường kính Ø 168mm, Tổng chiều sâu lỗ khoan 75m",
+                material: "Ống vách thép trơn 20m đầu cách ly sét phong hóa; ống lọc PVC đục lỗ kết bọc lưới 55m cuối đặt trong đới nứt nẻ bazan.",
+                role: "Dẫn nước ngấm thẳng trọng lực trực tiếp vào lòng tầng chứa nước bazan, bỏ qua hành trình thấm chậm chạp qua lớp vỏ sét nông.",
+                boq: "Lỗ khoan bổ cập sâu 75m (LK1)"
+            },
+            'hs-borehole-2': {
+                title: "Lỗ Khoan Bổ Cập Sâu Số 2",
+                tag: "Bổ cập trọng lực",
+                desc: "Lỗ khoan bổ cập thứ 2 nằm cách lỗ thứ nhất khoảng 15m dọc bồn thấm lọc. Hoạt động bổ cập đa giếng song song giúp mở rộng phân bố diện tích gò nước ngầm ngấm tỏa, tăng hiệu suất nạp tối đa.",
+                dim: "Đường kính Ø 168mm, Tổng chiều sâu 75m (Cách giếng 1 và 3 khoảng 15m)",
+                material: "Ống vách thép trơn cách ly 20m đầu; ống lọc PVC đục lỗ vách dày 55m cuối, chèn sỏi sạn bao quanh ống lọc.",
+                role: "Phân phối dòng chảy ngập sâu đều ra diện tích bồn lọc, nâng công suất tiếp nhận nước dưới đất tự nhiên lên 3 lần.",
+                boq: "Lỗ khoan bổ cập sâu 75m (LK2)"
+            },
+            'hs-borehole-3': {
+                title: "Lỗ Khoan Bổ Cập Sâu Số 3",
+                tag: "Bổ cập trọng lực",
+                desc: "Lỗ khoan bổ cập thứ 3 nằm ở cuối bồn thấm lọc (cách giếng 2 khoảng 15m). Tạo nên hệ thống 3 giếng bổ cập song song nối tiếp giải phóng nước lọc thấu nhanh, an toàn cho tầng chứa bazan.",
+                dim: "Đường kính Ø 168mm, Tổng chiều sâu 75m (Bố trí ở cuối chiều dọc bồn)",
+                material: "Ống chống trơn thép 20m đới nông; ống lọc lưới bọc sỏi sạn 55m đặt tại đới nứt nẻ kiến tạo bazan.",
+                role: "Thoát nước thấm lọc và đưa sâu trực tiếp vào lòng tầng bazan dốc nứt nẻ, tối đa hóa thể tích lưu trữ nguồn nước.",
+                boq: "Lỗ khoan bổ cập sâu 75m (LK3)"
+            },
+            'hs-monitoring': {
+                title: "Hệ Thống Giếng Quan Trắc Tự Động",
+                tag: "Giám sát công nghệ",
+                desc: "Gồm mạng lưới 5 giếng hẹp lân cận (Ø 90mm, sâu 75m). Trang bị thiết bị cảm biến áp suất tự ghi (Datalogger) thả chìm để liên tục ghi chép số liệu dao động mực nước ngầm, giúp kiểm soát tốc độ ngấm nước an toàn và hình dạng gò bổ cập.",
+                dim: "Đường kính giếng Ø 90mm, Chiều sâu giếng 75m. Bộ 5 giếng bố trí song song và vuông góc dốc địa hình.",
+                material: "Hộp đầu thu telemetry mặt đất bằng nhựa kỹ thuật chịu nhiệt; ống vách giếng PVC bảo vệ.",
+                role: "Tự động đo đạc áp lực cột nước và ghi dữ liệu (Real-time 15 phút/lần) gửi về trung tâm điều hành trong suốt 1 năm thử nghiệm.",
+                boq: "5 lỗ khoan quan trắc Ø 90mm x 75m + 5 Bộ Datalogger"
+            }
+        };
+
+        // Active State variables
+        let isFlowing = true;
+        let flowSpeed = 60;
+        let activeHotspot = null;
+        let selectedSop = null;
+
+        // Document elements
+        const flowRateInput = document.getElementById('flow-rate');
+        const flowValueSpan = document.getElementById('flow-value');
+        const btnPause = document.getElementById('btn-pause');
+        const statusBadge = document.getElementById('status-badge');
+        
+        // Element references for animation controls
+        const flowCanal = document.getElementById('flow-canal');
+        const flowPvc = document.getElementById('flow-pvc');
+        const flowBh1 = document.getElementById('flow-bh1');
+        const flowBh2 = document.getElementById('flow-bh2');
+        const flowBh3 = document.getElementById('flow-bh3');
+        const telemetryGraphPath = document.getElementById('telemetry-graph-path');
+
+        // Dynamic Telemetry State Variables
+        let telemetryWaterLevel = 42.85;
+        let telemetryFlowRate = 15.4;
+
+        // Initialize App
+        window.onload = function() {
+            setupEventHandlers();
+            startTelemetrySimulation();
+        }
+
+        // Setup SVG and Controls Event Listeners
+        function setupEventHandlers() {
+            // Interactive SVG elements click
+            const hotspots = document.querySelectorAll('.hotspot');
+            hotspots.forEach(el => {
+                el.addEventListener('click', function() {
+                    const id = el.getAttribute('id');
+                    highlightComponent(id);
+                });
+            });
+
+            // Flow rate slider listener
+            flowRateInput.addEventListener('input', function(e) {
+                flowSpeed = parseInt(e.target.value);
+                flowValueSpan.innerText = flowSpeed + " L/giây";
+                updateFlowAnimations();
+            });
+
+            // Pause/Play button
+            btnPause.addEventListener('click', toggleFlowState);
+        }
+
+        // Highlight Component & Show Info
+        function highlightComponent(id) {
+            // Remove previous active classes
+            document.querySelectorAll('.hotspot').forEach(el => {
+                el.classList.remove('hotspot-active');
+            });
+
+            // If clicking the currently active one, reset view to empty placeholder
+            if (activeHotspot === id) {
+                activeHotspot = null;
+                document.getElementById('spec-placeholder').classList.remove('hidden');
+                document.getElementById('spec-display').classList.add('hidden');
+                return;
+            }
+
+            activeHotspot = id;
+            const element = document.getElementById(id);
+            if (element) {
+                element.classList.add('hotspot-active');
+            }
+
+            const data = componentData[id];
+            if (data) {
+                // Switch Tab to details automatically
+                switchTab('tab-details');
+
+                // Update Spec Panel
+                document.getElementById('spec-title').innerText = data.title;
+                document.getElementById('spec-tag').innerText = data.tag;
+                document.getElementById('spec-desc').innerText = data.desc;
+                document.getElementById('spec-dim').innerText = data.dim;
+                document.getElementById('spec-material').innerText = data.material;
+                document.getElementById('spec-role').innerText = data.role;
+                document.getElementById('spec-boq').innerText = data.boq;
+
+                // Show Panel
+                document.getElementById('spec-placeholder').classList.add('hidden');
+                document.getElementById('spec-display').classList.remove('hidden');
+            }
+        }
+
+        // Switch Sidebar Tabs
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-sky-600', 'text-white');
+                el.classList.add('text-slate-400', 'hover:text-white');
+            });
+
+            document.getElementById(tabId).classList.add('active');
+            const targetBtn = document.getElementById('btn-' + tabId);
+            if (targetBtn) {
+                targetBtn.classList.remove('text-slate-400', 'hover:text-white');
+                targetBtn.classList.add('bg-sky-600', 'text-white');
+            }
+        }
+
+        // Handle Active SOP steps
+        function selectSopStep(stepNum) {
+            // Unhighlight other SOP cards
+            document.querySelectorAll('.sop-card').forEach(el => {
+                el.classList.remove('border-sky-500', 'bg-sky-500/10');
+                el.querySelector('.step-num').classList.remove('bg-sky-500', 'text-slate-950');
+                el.querySelector('.step-num').classList.add('bg-slate-800', 'text-slate-400');
+            });
+
+            // Highlight chosen SOP card
+            const activeCard = document.getElementById('sop-step-' + stepNum);
+            activeCard.classList.add('border-sky-500', 'bg-sky-500/10');
+            const stepBadge = activeCard.querySelector('.step-num');
+            stepBadge.classList.remove('bg-slate-800', 'text-slate-400');
+            stepBadge.classList.add('bg-sky-500', 'text-slate-950');
+
+            // Deactivate all hotspots first
+            document.querySelectorAll('.hotspot').forEach(el => {
+                el.classList.remove('hotspot-active');
+            });
+
+            // Trigger visual focus highlight in the SVG model
+            switch(stepNum) {
+                case 1:
+                    highlightComponent('hs-filtration');
+                    break;
+                case 2:
+                    highlightComponent('hs-sediment');
+                    break;
+                case 3:
+                    highlightComponent('hs-borehole-2');
+                    break;
+                case 4:
+                    highlightComponent('hs-monitoring');
+                    break;
+            }
+        }
+
+        // Toggle Simulation Flow Pause/Play state
+        function toggleFlowState() {
+            isFlowing = !isFlowing;
+            
+            if (isFlowing) {
+                btnPause.innerHTML = `
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Tạm dừng</span>`;
+                btnPause.classList.replace('bg-emerald-600', 'bg-slate-800');
+                btnPause.classList.replace('hover:bg-emerald-500', 'hover:bg-slate-700');
+                
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Đang vận hành`;
+                statusBadge.classList.replace('text-amber-400', 'text-emerald-400');
+                statusBadge.classList.replace('bg-amber-500/10', 'bg-emerald-500/10');
+                statusBadge.classList.replace('border-amber-500/20', 'border-emerald-500/20');
+                
+                updateFlowAnimations();
+            } else {
+                btnPause.innerHTML = `
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Tiếp tục</span>`;
+                btnPause.classList.replace('bg-slate-800', 'bg-emerald-600');
+                btnPause.classList.replace('hover:bg-slate-700', 'hover:bg-emerald-500');
+                
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> Đã tạm dừng`;
+                statusBadge.classList.replace('text-emerald-400', 'text-amber-400');
+                statusBadge.classList.replace('bg-emerald-500/10', 'bg-amber-500/10');
+                statusBadge.classList.replace('border-emerald-500/20', 'border-amber-500/20');
+                
+                stopFlowAnimations();
+            }
+        }
+
+        // Stop Flow Animations
+        function stopFlowAnimations() {
+            const waterFlowLines = document.querySelectorAll('.water-flow-line, .water-flow-line-fast');
+            waterFlowLines.forEach(el => {
+                el.style.animationPlayState = 'paused';
+            });
+        }
+
+        // Apply dynamic speed to CSS flow animations
+        function updateFlowAnimations() {
+            if (!isFlowing) return;
+            
+            const waterFlowLines = document.querySelectorAll('.water-flow-line, .water-flow-line-fast');
+            waterFlowLines.forEach(el => {
+                el.style.animationPlayState = 'running';
+            });
+
+            // Proportional velocity calculation
+            const slowDuration = (120 - flowSpeed) / 40; // in seconds
+            const fastDuration = (120 - flowSpeed) / 85; 
+
+            if (flowCanal) flowCanal.style.animationDuration = slowDuration + "s";
+            if (flowPvc) flowPvc.style.animationDuration = fastDuration + "s";
+            if (flowBh1) flowBh1.style.animationDuration = fastDuration + "s";
+            if (flowBh2) flowBh2.style.animationDuration = fastDuration + "s";
+            if (flowBh3) flowBh3.style.animationDuration = fastDuration + "s";
+        }
+
+        // Telemetry values real-time simulation logic
+        function startTelemetrySimulation() {
+            const telemetryWaterSpan = document.getElementById('tel-water-level');
+            const telemetryFlowSpan = document.getElementById('tel-flow-rate');
+            
+            // Periodically mutate numbers to create an active simulation
+            setInterval(() => {
+                if (!isFlowing) return;
+
+                // Flow speed changes based on slider input with soft random walk
+                const baseFlow = flowSpeed * 0.25;
+                telemetryFlowRate = (baseFlow + (Math.random() - 0.5) * 0.4).toFixed(1);
+                
+                // Mực nước fluctuates dynamically based on input flow
+                const waterRise = (flowSpeed / 3000); 
+                telemetryWaterLevel = (parseFloat(telemetryWaterLevel) + waterRise + (Math.random() - 0.5) * 0.01).toFixed(2);
+                
+                // Keep water level in safe bounding boxes
+                if (telemetryWaterLevel > 55) telemetryWaterLevel = 38.2; 
+
+                // Update text displays
+                telemetryWaterSpan.innerText = telemetryWaterLevel + " m";
+                telemetryFlowSpan.innerText = telemetryFlowRate + " L/s";
+
+                // Redraw telemetry wave shape based on values to simulate real wave logic
+                const waveScale = (telemetryWaterLevel % 10) + 10;
+                const pathData = `M 0 25 Q 10 ${25 - waveScale * 0.4}, 20 ${23 + Math.sin(Date.now() / 300) * 2} T 40 ${20 + Math.cos(Date.now() / 400) * 1.5} T 60 ${18 - waveScale * 0.5} T 80 ${22 + Math.sin(Date.now() / 200) * 1} T 100 8 L 100 30 L 0 30 Z`;
+                if (telemetryGraphPath) {
+                    telemetryGraphPath.setAttribute('d', pathData);
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
